@@ -14,6 +14,7 @@
   var GetElementsByInterface = scope.GetElementsByInterface;
   var Node = scope.wrappers.Node;
   var ParentNodeInterface = scope.ParentNodeInterface;
+  var NonElementParentNodeInterface = scope.NonElementParentNodeInterface;
   var Selection = scope.wrappers.Selection;
   var SelectorsInterface = scope.SelectorsInterface;
   var ShadowRoot = scope.wrappers.ShadowRoot;
@@ -55,7 +56,11 @@
   function wrapMethod(name) {
     var original = document[name];
     Document.prototype[name] = function() {
-      return wrap(original.apply(unsafeUnwrap(this), arguments));
+      var wrapped = wrap(original.apply(unsafeUnwrap(this), arguments));
+      if (wrapped && wrapped.tagName == "OBJECT") {
+        return unsafeUnwrap(wrapped);
+      }
+      return wrapped;
     };
   }
 
@@ -68,7 +73,6 @@
     'createEventNS',
     'createRange',
     'createTextNode',
-    'getElementById'
   ].forEach(wrapMethod);
 
   var originalAdoptNode = document.adoptNode;
@@ -302,6 +306,7 @@
   mixin(Document.prototype, GetElementsByInterface);
   mixin(Document.prototype, ParentNodeInterface);
   mixin(Document.prototype, SelectorsInterface);
+  mixin(Document.prototype, NonElementParentNodeInterface);
 
   mixin(Document.prototype, {
     get implementation() {
@@ -337,6 +342,12 @@
     setWrapper(impl, this);
   }
 
+  var originalCreateDocument = document.implementation.createDocument;
+  DOMImplementation.prototype.createDocument = function() {
+    arguments[2] = unwrap(arguments[2]);
+    return wrap(originalCreateDocument.apply(unsafeUnwrap(this), arguments));
+  };
+
   function wrapImplMethod(constructor, name) {
     var original = document.implementation[name];
     constructor.prototype[name] = function() {
@@ -352,7 +363,6 @@
   }
 
   wrapImplMethod(DOMImplementation, 'createDocumentType');
-  wrapImplMethod(DOMImplementation, 'createDocument');
   wrapImplMethod(DOMImplementation, 'createHTMLDocument');
   forwardImplMethod(DOMImplementation, 'hasFeature');
 
@@ -361,8 +371,8 @@
   forwardMethodsToWrapper([
     window.DOMImplementation,
   ], [
-    'createDocumentType',
     'createDocument',
+    'createDocumentType',
     'createHTMLDocument',
     'hasFeature',
   ]);
