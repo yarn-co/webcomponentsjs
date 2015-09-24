@@ -92,7 +92,7 @@ function customMixin(inTarget, inSrc, inNative) {
   // TODO(sjmiles): 'used' allows us to only copy the 'youngest' version of
   // any property. This set should be precalculated. We also need to
   // consider this for supporting 'super'.
-  var used = {};
+  var used = {"recordset": 1};
   // start with inSrc
   var p = inSrc;
   // The default is HTMLElement.prototype, so we add a test to avoid mixing in
