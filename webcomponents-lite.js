@@ -52,7 +52,6 @@
   var modules = [
     'URL/URL.js',
     'WeakMap/WeakMap.js',
-    'MutationObserver/MutationObserver.js',
     'Template/Template.js',
     'HTMLImports/HTMLImports.js',
     'CustomElements/CustomElements.js',
