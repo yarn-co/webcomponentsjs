@@ -15,7 +15,7 @@ before_script:
 - export PATH=$PWD/node_modules/.bin:$PATH
 script:
 - xvfb-run wct
-- "if [ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ]; then wct -s 'default'; fi"
+- "if [ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ]; then wct -s 'Windows 10/microsoftedge' -s 'Windows 8.1/internet explorer@11' -s 'OS X 10.11/safari@9' -s 'OS X 10.10/safari@8' -s 'OS X 10.9/safari@7'; fi"
 env:
   global:
   - secure: c0kVrjNDtqd06Gyg4Xi3iopr0KCz1k0LbZeL+TCbnyCdmAE7m9FcJASWvM2Zr7d774hTiMSi0Z79SlV6XZhLN2pi4EsbdEpsnVeAXXH/GYzDKgpXbdfD/nQv4n1nMXL6XSaZkAX7WwgmrjzJ9cXQJYV9vNHIBRcGoVRRyCFx9v4=
