@@ -11,7 +11,7 @@ A suite of polyfills supporting the [Web Components](http://webcomponents.org) s
 
 **Shadow DOM**: provides encapsulation by hiding DOM subtrees under shadow roots ([spec](https://w3c.github.io/webcomponents/spec/shadow/)).
 
-This also folds in polyfills for `MutationObserver` and `WeakMap`.
+This also folds in polyfills for `MutationObserver`, `WeakMap`, and `URL`.
 
 
 ## Releases
@@ -22,48 +22,60 @@ Pre-built (concatenated & minified) versions of the polyfills are maintained in 
 
 `webcomponents-lite.js` includes all polyfills except for shadow DOM.
 
-
 ## Browser Support
 
 Our polyfills are intended to work in the latest versions of evergreen browsers. See below
 for our complete browser support matrix:
 
-| Polyfill   | IE10 | IE11+ | Chrome* | Firefox* | Safari 7+* | Chrome Android* | Mobile Safari* |
-| ---------- |:----:|:-----:|:-------:|:--------:|:----------:|:---------------:|:--------------:|
-| Custom Elements | ~ | ✓ | ✓ | ✓ | ✓ | ✓| ✓ |
-| HTML Imports | ~ | ✓ | ✓ | ✓ | ✓| ✓| ✓ |
+| Polyfill   | IE11+ | Edge* |Chrome* | Firefox* | Safari 7+* | Chrome Android* | Mobile Safari* |
+| ---------- |:-----:|:----:|:-------:|:--------:|:----------:|:---------------:|:--------------:|
+| Custom Elements | ✓ | ✓ | ✓ | ✓ | ✓ | ✓| ✓ |
+| HTML Imports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓| ✓ |
 | Shadow DOM | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Templates | ✓ | ✓ | ✓ | ✓| ✓ | ✓ | ✓ |
 
 
-*Indicates the current version of the browser
-
-~Indicates support may be flaky. If using Custom Elements or HTML Imports with Shadow DOM,
-you will get the non-flaky Mutation Observer polyfill that Shadow DOM includes.
+\*Indicates the current version of the browser
 
 The polyfills may work in older browsers, however require additional polyfills (such as classList)
 to be used. We cannot guarantee support for browsers outside of our compatibility matrix.
 
 
-### Manually Building
+## Breaking Changes in WebComponents 0.8
 
-If you wish to build the polyfills yourself, you'll need `node` and `gulp` on your system:
+On January 12th 2016, Microsoft [ended support](https://www.microsoft.com/en-us/WindowsForBusiness/End-of-IE-support) for older versions of Internet
+Explorer.
 
- * install [node.js](http://nodejs.org/) using the instructions on their website
- * use `npm` to install [gulp.js](http://gulpjs.com/): `npm install -g gulp`
+Effectively, this means that IE 10 is no longer supported by Microsoft for [the vast majority](https://support.microsoft.com/en-us/lifecycle#gp/Microsoft-Internet-Explorer) of users.
 
-Now you are ready to build the polyfills with:
+With this in mind, we've decided to remove IE 10 support from the built versions
+of the polyfills to reduce script size.
 
-    # install dependencies
-    npm install
-    # build
-    gulp build
+Use of WebComponents in IE 10 can still be accomplished by adding the following
+scripts to the page.
 
-The builds will be placed into the `dist/` directory.
+### To continue use in IE 10
 
-## Contribute
+There are two options to continue using WebComponents polyfills in IE 10:
 
-See the [contributing guide](CONTRIBUTING.md)
+#### Using `webcomponents-lite.js`
+
+Add `MutationObserver.js` and `URL.js` before `webcomponents-lite.js` in the page.
+
+```html
+<script src="webcomponentsjs/MutationObserver.js"></script>
+<script src="webcomponentsjs/URL.js"></script>
+<script src="webcomponentsjs/webcomponents-lite.js"></script>
+```
+
+### Using `webcomponents.js`
+
+Add `URL.js` before `webcomponents.js` in the page.
+
+```html
+<script src="webcomponentsjs/URL.js"></script>
+<script src="webcomponentsjs/webcomponents.js"></script>
+```
 
 ## License
 
@@ -75,9 +87,9 @@ Copyright (c) 2015 The Polymer Authors. All rights reserved.
 
 ### `WebComponentsReady`
 
-Under native HTML Imports, `<script>` tags in the main document block the loading of such imports. This is to ensure the imports have loaded and any registered elements in them have been upgraded. 
+Under native HTML Imports, `<script>` tags in the main document block the loading of such imports. This is to ensure the imports have loaded and any registered elements in them have been upgraded.
 
-The webcomponents.js and webcomponents-lite.js polyfills parse element definitions and handle their upgrade asynchronously. If prematurely fetching the element from the DOM before it has an opportunity to upgrade, you'll be working with an `HTMLUnknownElement`. 
+The webcomponents.js and webcomponents-lite.js polyfills parse element definitions and handle their upgrade asynchronously. If prematurely fetching the element from the DOM before it has an opportunity to upgrade, you'll be working with an `HTMLUnknownElement`.
 
 For these situations (or when you need an approximate replacement for the Polymer 0.5 `polymer-ready` behavior), you can use the `WebComponentsReady` event as a signal before interacting with the element. The criteria for this event to fire is all Custom Elements with definitions registered by the time HTML Imports available at load time have loaded have upgraded.
 
