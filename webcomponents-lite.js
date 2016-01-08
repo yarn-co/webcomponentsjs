@@ -50,7 +50,6 @@
 
   // construct full dependency list
   var modules = [
-    'URL/URL.js',
     'WeakMap/WeakMap.js',
     'Template/Template.js',
     'HTMLImports/HTMLImports.js',

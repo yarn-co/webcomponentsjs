@@ -77,7 +77,6 @@
   var modules = [].concat(
     ShadowDOM,
     [
-      'URL/URL.js',
       'HTMLImports/HTMLImports.js',
       'CustomElements/CustomElements.js',
       'WebComponents/lang.js',

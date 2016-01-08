@@ -1,6 +1,5 @@
 [
   "build/boot-lite.js",
-  "../URL/URL.js",
   "../WeakMap/WeakMap.js",
   "../Template/Template.js",
   "../HTMLImports/build.json",
