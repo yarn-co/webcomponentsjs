@@ -194,7 +194,9 @@
     };
 
     if (needsCloning) {
-      HTMLTemplateElement.prototype.cloneNode = TemplateImpl.cloneNode;
+      HTMLTemplateElement.prototype.cloneNode = function(deep) {
+        return TemplateImpl.cloneNode(this, deep);
+      };
     }
   }
 
