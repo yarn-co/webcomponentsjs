@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+    @license
+    Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+    This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+    The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+    The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+    Code distributed by Google as part of the polymer project is also
+    subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <title>Template Test</title>
+    <script src="../../src/Template/Template.js"></script>
+  </head>
+  <body>
+
+    <script>
+      assert = {
+        equal: function(a, b, message) {
+          if (!(a === b)) {
+            throw message;
+          }
+        }
+      }
+
+      var imp = document.createElement('div');
+      var t = document.createElement('template');
+      var s = 'a<template id="a">b<template id="b">c<template id="c">d</template></template></template>';
+      t.innerHTML = s;
+      imp.appendChild(t);
+      var impClone = imp.cloneNode(true);
+      var imp = imp.firstChild;
+      var deepClone = impClone.firstChild;
+      assert.equal(deepClone.content.childNodes.length, 2,
+          'deep cloned template.content is empty');
+      //assert.notEqual(imp.content.firstChild, deepClone.content.firstChild,
+      //    'cloned content is not different from source');
+      var nested = deepClone.content.lastChild;
+      //assert.isDefined(nested.content, 'nested cloned template content dne');
+      assert.equal(nested.content.childNodes.length, 2,
+          'deep cloned template.content is empty');
+      nested = nested.content.lastChild;
+      //assert.isDefined(nested, 'nested cloned template content dne');
+      assert.equal(nested.content.childNodes.length, 2,
+          'deep cloned template.content is empty');
+      nested = nested.content.lastChild;
+      //assert.isDefined(nested, 'nested cloned template content dne');
+      assert.equal(nested.content.childNodes.length, 1,
+          'deep cloned template.content is empty');
+      console.log('success!');
+    </script>
+  </body>
+</html>
