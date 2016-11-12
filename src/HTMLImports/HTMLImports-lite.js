@@ -140,27 +140,11 @@ function watchImportsLoad(callback, doc) {
   }
 }
 
-// NOTE: test for native imports loading is based on explicitly watching
-// all imports (see below).
-// However, we cannot rely on this entirely without watching the entire document
-// for import links. For perf reasons, currently only head is watched.
-// Instead, we fallback to checking if the import property is available
-// and the document is not itself loading.
 function isImportLoaded(link) {
   return link.__loaded;
 }
 
-// TODO(sorvell): Workaround for
-// https://www.w3.org/Bugs/Public/show_bug.cgi?id=25007, should be removed when
-// this bug is addressed.
-// (1) Install a mutation observer to see when HTMLImports have loaded
-// (2) if this script is run during document load it will watch any existing
-// imports for loading.
-//
-// NOTE: The workaround has restricted functionality: (1) it's only compatible
-// with imports that are added to document.head since the mutation observer
-// watches only head for perf reasons, (2) it requires this script
-// to run before any imports have completed loading.
+// make `whenReady` work with native HTMLImports
 if (useNative) {
   new MutationObserver(function(mxns) {
     for (var i=0, l=mxns.length, m; (i < l) && (m=mxns[i]); i++) {
@@ -548,6 +532,7 @@ function hasBaseURIAccessor(doc) {
   return !! Object.getOwnPropertyDescriptor(doc, 'baseURI');
 }
 
+/********************* vulcanize style inline processing  *********************/
 var attrs = ['action', 'src', 'href', 'url', 'style'];
 function fixUrlAttributes(element, base) {
   for (var i=0, l=attrs.length, a, at, v; (i<l) && (a=attrs[i]); i++) {
@@ -667,4 +652,4 @@ if (!useNative) {
 scope.useNative = useNative;
 scope.whenReady = whenReady;
 
-})(window.HTMLImports = window.HTMLImports || {});
+})(window.HTMLImports = (window.HTMLImports || {}));
