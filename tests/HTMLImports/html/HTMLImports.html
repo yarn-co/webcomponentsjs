@@ -12,6 +12,13 @@
   <head>
     <title>HTML Imports Test</title>
     <script src="../../../src/HTMLImports/HTMLImports.js"></script>
+    <script>
+      WCT = {
+        waitFor: function(callback) {
+          HTMLImports.whenReady(callback);
+        }
+      };
+    </script>
     <script src="../../../../web-component-tester/browser.js"></script>
     <link rel="import" href="imports/import-1.html">
   </head>
@@ -21,10 +28,8 @@
         if (HTMLImports.useNative) {
           return;
         }
-        chai.assert.equal(5, Object.keys(HTMLImports.importLoader.cache).length,
-          'must cache exactly nine resources');
-        chai.assert.equal(5, Object.keys(HTMLImports.importer.documents).length,
-          'must cache exactly nine documents');
+        chai.assert.equal(6, Object.keys(HTMLImports.importLoader.cache).length);
+        chai.assert.equal(6, Object.keys(HTMLImports.importer.documents).length);
 
         Object.keys(HTMLImports.importer.documents).forEach(function(key) {
           var doc = HTMLImports.importer.documents[key];

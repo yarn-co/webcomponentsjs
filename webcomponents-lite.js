@@ -53,7 +53,7 @@
     'URL/URL.js',
     'WeakMap/WeakMap.js',
     'Template/Template.js',
-    'HTMLImports/HTMLImports.js',
+    'HTMLImports/HTMLImports-lite.js',
     'WebComponents/pre-polyfill.js',
     '../../custom-elements/custom-elements.min.js',
     '../../shadydom/shadydom.min.js',
