@@ -490,12 +490,13 @@ var importer = {
   loadedAll: function() {
     this._flatten(document);
     runScripts();
+    this._fireEvents(document);
   },
 
   _flatten: function(element) {
     var n$ = element.querySelectorAll(IMPORT_SELECTOR);
-    for (var j=0; j < n$.length; j++) {
-      var n = n$[j];
+    for (var i=0; i < n$.length; i++) {
+      var n = n$[i];
       n.import = this.documents[n.href];
       if (n.import && !n.import.__firstImport) {
         n.import.__firstImport = n;
@@ -505,6 +506,13 @@ var importer = {
           this.observe(n);
         }
       }
+    }
+  },
+
+  _fireEvents: function(element) {
+    var n$ = element.querySelectorAll(IMPORT_SELECTOR);
+    for (var i=0; i < n$.length; i++) {
+      var n = n$[i];
       n.dispatchEvent(new CustomEvent(n.import ? 'load' : 'error'));
       n.__loaded = true;
     }
