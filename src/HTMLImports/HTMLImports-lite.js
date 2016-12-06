@@ -203,6 +203,7 @@ whenReady(function(detail) {
 
 
 /********************* path fixup *********************/
+var ABS_URL_TEST = /(^\/)|(^#)|(^[\w-\d]*:)/;
 var CSS_URL_REGEXP = /(url\()([^)]*)(\))/g;
 var CSS_IMPORT_REGEXP = /(@import[\s]+(?!url\())([^;]*)(;)/g;
 
@@ -217,22 +218,28 @@ var path = {
     return style;
   },
 
-  resolveUrlsInCssText: function(cssText, linkUrl, urlObj) {
-    var r = this.replaceUrls(cssText, urlObj, linkUrl, CSS_URL_REGEXP);
-    r = this.replaceUrls(r, urlObj, linkUrl, CSS_IMPORT_REGEXP);
+  resolveUrlsInCssText: function(cssText, linkUrl) {
+    var r = this.replaceUrls(cssText, linkUrl, CSS_URL_REGEXP);
+    r = this.replaceUrls(r, linkUrl, CSS_IMPORT_REGEXP);
     return r;
   },
 
-  replaceUrls: function(text, urlObj, linkUrl, regexp) {
+  replaceUrls: function(text, linkUrl, regexp) {
     return text.replace(regexp, function(m, pre, url, post) {
       var urlPath = url.replace(/["']/g, '');
       if (linkUrl) {
         urlPath = (new URL(urlPath, linkUrl)).href;
       }
-      urlObj.href = urlPath;
-      urlPath = urlObj.href;
       return pre + '\'' + urlPath + '\'' + post;
     });
+  },
+
+  replaceAttrUrl: function(text, linkUrl) {
+    if (text && ABS_URL_TEST.test(text)) {
+      return text;
+    } else {
+      return new URL(text, linkUrl).href;
+    }
   }
 
 };
@@ -549,7 +556,7 @@ function fixUrlAttributes(element, base) {
     if (v && (v.search(/({{|\[\[)/) < 0)) {
       at.value = (a === 'style') ?
         path.resolveUrlsInCssText(v, base) :
-        new URL(v, base);
+        path.replaceAttrUrl(v, base);
     }
   }
 }
@@ -604,7 +611,7 @@ function markScripts(element, url) {
 }
 
 function runScripts() {
-  var s$ = document.head.querySelectorAll('import-content script[type=' + scriptType + ']');
+  var s$ = document.querySelectorAll('import-content script[type=' + scriptType + ']');
   for (var i=0; i < s$.length; i++) {
     var o = s$[i];
     var c = document.createElement('script');
@@ -619,12 +626,23 @@ function runScripts() {
   }
 }
 
+function fixDomModules(element, url) {
+  var s$ = element.querySelectorAll('dom-module');
+  for (var i=0; i < s$.length; i++) {
+    var o = s$[i];
+    var assetpath = o.getAttribute('assetpath') || '';
+    o.setAttribute('assetpath', path.replaceAttrUrl(assetpath, url));
+  }
+}
+
 function makeDocument(resource, url) {
   var content = document.createElement('import-content');
   content.setAttribute('import-href', url);
   content.style.display = 'none';
   content.innerHTML = resource;
   markScripts(content, url);
+  // TODO(sorvell): this is specific to users (Polymer) of the dom-module element.
+  fixDomModules(content, url);
   fixUrls(content, url);
   return content;
 }
