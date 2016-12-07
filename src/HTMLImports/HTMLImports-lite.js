@@ -46,162 +46,6 @@ var currentScriptDescriptor = {
 Object.defineProperty(document, '_currentScript', currentScriptDescriptor);
 Object.defineProperty(rootDocument, '_currentScript', currentScriptDescriptor);
 
-/**
-  Add support for the `HTMLImportsLoaded` event and the `HTMLImports.whenReady`
-  method. This api is necessary because unlike the native implementation,
-  script elements do not force imports to resolve. Instead, users should wrap
-  code in either an `HTMLImportsLoaded` handler or after load time in an
-  `HTMLImports.whenReady(callback)` call.
-
-  NOTE: This module also supports these apis under the native implementation.
-  Therefore, if this file is loaded, the same code can be used under both
-  the polyfill and native implementation.
- */
-
-var isIE = /Trident/.test(navigator.userAgent);
-
-// call a callback when all HTMLImports in the document at call time
-// (or at least document ready) have loaded.
-// 1. ensure the document is in a ready state (has dom), then
-// 2. watch for loading of imports and call callback when done
-function whenReady(callback, doc) {
-  doc = doc || rootDocument;
-  // if document is loading, wait and try again
-  whenDocumentReady(function() {
-    watchImportsLoad(callback, doc);
-  }, doc);
-}
-
-// call the callback when the document is in a ready state (has dom)
-var requiredReadyState = isIE ? 'complete' : 'interactive';
-var READY_EVENT = 'readystatechange';
-function isDocumentReady(doc) {
-  return (doc.readyState === 'complete' ||
-      doc.readyState === requiredReadyState);
-}
-
-// call <callback> when we ensure the document is in a ready state
-function whenDocumentReady(callback, doc) {
-  if (!isDocumentReady(doc)) {
-    var checkReady = function() {
-      if (doc.readyState === 'complete' ||
-          doc.readyState === requiredReadyState) {
-        doc.removeEventListener(READY_EVENT, checkReady);
-        whenDocumentReady(callback, doc);
-      }
-    };
-    doc.addEventListener(READY_EVENT, checkReady);
-  } else if (callback) {
-    callback();
-  }
-}
-
-function markTargetLoaded(event) {
-  event.target.__loaded = true;
-}
-
-// call <callback> when we ensure all imports have loaded
-function watchImportsLoad(callback, doc) {
-  var imports = doc.querySelectorAll('link[rel=import]');
-  var parsedCount = 0, importCount = imports.length, newImports = [], errorImports = [];
-  function checkDone() {
-    if (parsedCount == importCount && callback) {
-      callback({
-        allImports: imports,
-        loadedImports: newImports,
-        errorImports: errorImports
-      });
-    }
-  }
-  function loadedImport(e) {
-    markTargetLoaded(e);
-    newImports.push(this);
-    parsedCount++;
-    checkDone();
-  }
-  function errorLoadingImport(e) {
-    errorImports.push(this);
-    parsedCount++;
-    checkDone();
-  }
-  if (importCount) {
-    for (var i=0, imp; i<importCount && (imp=imports[i]); i++) {
-      if (isImportLoaded(imp)) {
-        newImports.push(this);
-        parsedCount++;
-        checkDone();
-      } else {
-        imp.addEventListener('load', loadedImport);
-        imp.addEventListener('error', errorLoadingImport);
-      }
-    }
-  } else {
-    checkDone();
-  }
-}
-
-function isImportLoaded(link) {
-  return link.__loaded;
-}
-
-// make `whenReady` work with native HTMLImports
-if (useNative) {
-  new MutationObserver(function(mxns) {
-    for (var i=0, l=mxns.length, m; (i < l) && (m=mxns[i]); i++) {
-      if (m.addedNodes) {
-        handleImports(m.addedNodes);
-      }
-    }
-  }).observe(document.head, {childList: true});
-
-  function handleImports(nodes) {
-    for (var i=0, l=nodes.length, n; (i<l) && (n=nodes[i]); i++) {
-      if (isImport(n)) {
-        handleImport(n);
-      }
-    }
-  }
-
-  function isImport(element) {
-    return element.localName === 'link' && element.rel === 'import';
-  }
-
-  function handleImport(element) {
-    var loaded = element.import;
-    if (loaded) {
-      markTargetLoaded({target: element});
-    } else {
-      element.addEventListener('load', markTargetLoaded);
-      element.addEventListener('error', markTargetLoaded);
-    }
-  }
-
-  // make sure to catch any imports that are in the process of loading
-  // when this script is run.
-  (function() {
-    if (document.readyState === 'loading') {
-      var imports = document.querySelectorAll('link[rel=import]');
-      for (var i=0, l=imports.length, imp; (i<l) && (imp=imports[i]); i++) {
-        handleImport(imp);
-      }
-    }
-  })();
-
-}
-
-// Fire the 'HTMLImportsLoaded' event when imports in document at load time
-// have loaded. This event is required to simulate the script blocking
-// behavior of native imports. A main document script that needs to be sure
-// imports have loaded should wait for this event.
-whenReady(function(detail) {
-  scope.ready = true;
-  scope.readyTime = new Date().getTime();
-  var evt = rootDocument.createEvent("CustomEvent");
-  evt.initCustomEvent("HTMLImportsLoaded", true, true, detail);
-  rootDocument.dispatchEvent(evt);
-});
-
-
 /********************* path fixup *********************/
 var ABS_URL_TEST = /(^\/)|(^#)|(^[\w-\d]*:)/;
 var CSS_URL_REGEXP = /(url\()([^)]*)(\))/g;
@@ -498,6 +342,7 @@ var importer = {
     this._flatten(document);
     runScripts();
     this._fireEvents(document);
+    this.observe(document.head);
   },
 
   _flatten: function(element) {
@@ -508,9 +353,12 @@ var importer = {
       if (n.import && !n.import.__firstImport) {
         n.import.__firstImport = n;
         this._flatten(n.import);
-        n.parentNode.insertBefore(n.import, n);
-        if (document.contains(n.parentNode)) {
-          this.observe(n);
+        if (!n.import.parentNode) {
+          n.parentNode.insertBefore(n.import, n);
+          if (document.contains(n.parentNode)) {
+            // TODO(sorvell): need to coordinate with observer in document.head.
+            //this.observe(n.import);
+          }
         }
       }
     }
@@ -520,13 +368,32 @@ var importer = {
     var n$ = element.querySelectorAll(IMPORT_SELECTOR);
     for (var i=0; i < n$.length; i++) {
       var n = n$[i];
-      n.dispatchEvent(new CustomEvent(n.import ? 'load' : 'error'));
-      n.__loaded = true;
+      if (!n.__loaded) {
+        flags.log && console.warn('fire', n.import ? 'load' : 'error', n.href);
+        n.__loaded = true;
+        n.dispatchEvent(new CustomEvent(n.import ? 'load' : 'error'));
+      }
     }
   },
 
   observe: function(element) {
-    // do mutation observer...
+    if (!element.__importObserver) {
+      element.__importObserver = new MutationObserver(function (mxns) {
+        mxns.forEach(function(m) {
+          if (m.addedNodes) {
+            for (var i=0; i < m.addedNodes.length; i++) {
+              var p = m.addedNodes[i];
+              // TODO(sorvell): x-platform matches
+              if (p.nodeType === Node.ELEMENT_NODE &&
+                  p.matches(IMPORT_SELECTOR)) {
+                importer.loadNode(p);
+              }
+            }
+          }
+        });
+      });
+      element.__importObserver.observe(element, {childList: true, subtree: true});
+    }
   }
 
 };
@@ -646,6 +513,165 @@ function makeDocument(resource, url) {
   fixUrls(content, url);
   return content;
 }
+
+/**
+  Add support for the `HTMLImportsLoaded` event and the `HTMLImports.whenReady`
+  method. This api is necessary because unlike the native implementation,
+  script elements do not force imports to resolve. Instead, users should wrap
+  code in either an `HTMLImportsLoaded` handler or after load time in an
+  `HTMLImports.whenReady(callback)` call.
+
+  NOTE: This module also supports these apis under the native implementation.
+  Therefore, if this file is loaded, the same code can be used under both
+  the polyfill and native implementation.
+ */
+
+var isIE = /Trident/.test(navigator.userAgent);
+
+// call a callback when all HTMLImports in the document at call time
+// (or at least document ready) have loaded.
+// 1. ensure the document is in a ready state (has dom), then
+// 2. watch for loading of imports and call callback when done
+function whenReady(callback, doc) {
+  doc = doc || rootDocument;
+  // if document is loading, wait and try again
+  whenDocumentReady(function() {
+    watchImportsLoad(callback, doc);
+  }, doc);
+}
+
+// call the callback when the document is in a ready state (has dom)
+var requiredReadyState = isIE ? 'complete' : 'interactive';
+var READY_EVENT = 'readystatechange';
+function isDocumentReady(doc) {
+  return (doc.readyState === 'complete' ||
+      doc.readyState === requiredReadyState);
+}
+
+// call <callback> when we ensure the document is in a ready state
+function whenDocumentReady(callback, doc) {
+  if (!isDocumentReady(doc)) {
+    var checkReady = function() {
+      if (doc.readyState === 'complete' ||
+          doc.readyState === requiredReadyState) {
+        doc.removeEventListener(READY_EVENT, checkReady);
+        whenDocumentReady(callback, doc);
+      }
+    };
+    doc.addEventListener(READY_EVENT, checkReady);
+  } else if (callback) {
+    callback();
+  }
+}
+
+function markTargetLoaded(event) {
+  event.target.__loaded = true;
+}
+
+// call <callback> when we ensure all imports have loaded
+function watchImportsLoad(callback, doc) {
+  var imports = doc.querySelectorAll(IMPORT_SELECTOR);
+  // only non-nested imports
+  imports = Array.prototype.slice.call(imports).filter(function(n) {
+    return !n.matches('import-content ' + IMPORT_SELECTOR)
+  });
+  var parsedCount = 0, importCount = imports.length, newImports = [], errorImports = [];
+  function checkDone() {
+    if (parsedCount == importCount && callback) {
+      callback({
+        allImports: imports,
+        loadedImports: newImports,
+        errorImports: errorImports
+      });
+    }
+  }
+  function loadedImport(e) {
+    markTargetLoaded(e);
+    newImports.push(this);
+    parsedCount++;
+    checkDone();
+  }
+  function errorLoadingImport(e) {
+    errorImports.push(this);
+    parsedCount++;
+    checkDone();
+  }
+  if (importCount) {
+    for (var i=0, imp; i<importCount && (imp=imports[i]); i++) {
+      if (isImportLoaded(imp)) {
+        newImports.push(this);
+        parsedCount++;
+        checkDone();
+      } else {
+        imp.addEventListener('load', loadedImport);
+        imp.addEventListener('error', errorLoadingImport);
+      }
+    }
+  } else {
+    checkDone();
+  }
+}
+
+function isImportLoaded(link) {
+  return link.__loaded;
+}
+
+// make `whenReady` work with native HTMLImports
+if (useNative) {
+  new MutationObserver(function(mxns) {
+    for (var i=0, l=mxns.length, m; (i < l) && (m=mxns[i]); i++) {
+      if (m.addedNodes) {
+        handleImports(m.addedNodes);
+      }
+    }
+  }).observe(document.head, {childList: true});
+
+  function handleImports(nodes) {
+    for (var i=0, l=nodes.length, n; (i<l) && (n=nodes[i]); i++) {
+      if (isImport(n)) {
+        handleImport(n);
+      }
+    }
+  }
+
+  function isImport(element) {
+    return element.localName === 'link' && element.rel === 'import';
+  }
+
+  function handleImport(element) {
+    var loaded = element.import;
+    if (loaded) {
+      markTargetLoaded({target: element});
+    } else {
+      element.addEventListener('load', markTargetLoaded);
+      element.addEventListener('error', markTargetLoaded);
+    }
+  }
+
+  // make sure to catch any imports that are in the process of loading
+  // when this script is run.
+  (function() {
+    if (document.readyState === 'loading') {
+      var imports = document.querySelectorAll('link[rel=import]');
+      for (var i=0, l=imports.length, imp; (i<l) && (imp=imports[i]); i++) {
+        handleImport(imp);
+      }
+    }
+  })();
+
+}
+
+// Fire the 'HTMLImportsLoaded' event when imports in document at load time
+// have loaded. This event is required to simulate the script blocking
+// behavior of native imports. A main document script that needs to be sure
+// imports have loaded should wait for this event.
+whenReady(function(detail) {
+  scope.ready = true;
+  scope.readyTime = new Date().getTime();
+  var evt = rootDocument.createEvent("CustomEvent");
+  evt.initCustomEvent("HTMLImportsLoaded", true, true, detail);
+  rootDocument.dispatchEvent(evt);
+});
 
 // Polyfill document.baseURI for browsers without it.
 if (!document.baseURI) {
