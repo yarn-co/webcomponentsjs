@@ -615,7 +615,7 @@ function watchImportsLoad(callback, doc) {
 function isImportLoaded(link) {
   return useNative ? link.__loaded ||
       (link.import && link.import.readyState !== 'loading') :
-      link.__importParsed;
+      link.__loaded;
 }
 
 // make `whenReady` work with native HTMLImports
