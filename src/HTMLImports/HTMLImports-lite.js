@@ -573,7 +573,7 @@ function watchImportsLoad(callback, doc) {
   var imports = doc.querySelectorAll(IMPORT_SELECTOR);
   // only non-nested imports
   imports = Array.prototype.slice.call(imports).filter(function(n) {
-    return !n.matches('import-content ' + IMPORT_SELECTOR)
+    return !n.matches('import-content ' + IMPORT_SELECTOR);
   });
   var parsedCount = 0, importCount = imports.length, newImports = [], errorImports = [];
   function checkDone() {
@@ -613,7 +613,9 @@ function watchImportsLoad(callback, doc) {
 }
 
 function isImportLoaded(link) {
-  return link.__loaded;
+  return useNative ? link.__loaded ||
+      (link.import && link.import.readyState !== 'loading') :
+      link.__importParsed;
 }
 
 // make `whenReady` work with native HTMLImports
